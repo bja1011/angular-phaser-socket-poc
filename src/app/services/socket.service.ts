@@ -7,10 +7,8 @@ import { io, Socket } from 'socket.io-client';
 export class SocketService {
   socket: Socket;
 
-
   constructor() {
     this.socket = io('http://localhost:3000');
-
 
     this.socket.on('connect', (socket) => {
       // socket.join('room1')
@@ -27,7 +25,5 @@ export class SocketService {
     // this.socket.emit('message', msg);
   }
 
-  getMessage() {
-
-  }
+  getMessage() {}
 }

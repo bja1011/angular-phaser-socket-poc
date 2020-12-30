@@ -6,15 +6,9 @@ import { AppComponent } from './app.component';
 import { SocketService } from './services/socket.service';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-  ],
+  declarations: [AppComponent],
+  imports: [BrowserModule, AppRoutingModule],
   providers: [SocketService],
   bootstrap: [AppComponent],
 })
-export class AppModule {
-}
+export class AppModule {}

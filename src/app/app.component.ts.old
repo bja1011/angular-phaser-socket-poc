@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { SocketService } from './services/socket.service';
 
-const isSpectator = location.search.includes('spectator');
 
 @Component({
   selector: 'app-root',

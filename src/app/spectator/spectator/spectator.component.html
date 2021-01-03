@@ -1,1 +1,14 @@
-<p>spectator works!</p>
+<button [routerLink]="['/watch/gra1']">Gra1</button>
+<button [routerLink]="['/watch/gra2']">Gra2</button>
+<button [routerLink]="['/watch/gra3']">Gra3</button>
+<button [routerLink]="['/watch/gra4']">Gra4</button>
+<!--<div *ngIf="connection$ | async as connection">-->
+<!--  {{ connection }}-->
+<!--</div>-->
+<div>
+  <app-test-game
+    *ngFor="let positionNumber of [1, 2, 3, 4]; let index = index"
+    [player]="players[index]"
+    [timeLeft]="timeLeft"
+  ></app-test-game>
+</div>

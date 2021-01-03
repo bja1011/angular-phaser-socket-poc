@@ -6,8 +6,11 @@ import { TestGameComponent } from './test-game/test-game.component';
 
 @NgModule({
   declarations: [TestGameComponent],
+  exports: [
+    TestGameComponent,
+  ],
   imports: [
-    CommonModule
-  ]
+    CommonModule,
+  ],
 })
 export class TestGameModule { }

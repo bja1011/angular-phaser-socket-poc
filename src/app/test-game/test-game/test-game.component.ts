@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { isSpectator } from '../../utils/utils';
 
 @Component({
@@ -11,9 +11,12 @@ export class TestGameComponent implements OnInit {
   top = 0;
   left = 0;
   private game: Phaser.Game;
+  @Input() timeLeft: number;
+  @Input() player: any;
 
   ngOnInit() {
     // this.createGame();
+
   }
 
 

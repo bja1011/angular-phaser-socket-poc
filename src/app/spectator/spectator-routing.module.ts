@@ -4,7 +4,7 @@ import { SpectatorComponent } from './spectator/spectator.component';
 
 const routes: Routes = [
   {
-    path: '',
+    path: ':gameId',
     component: SpectatorComponent,
   },
 ];

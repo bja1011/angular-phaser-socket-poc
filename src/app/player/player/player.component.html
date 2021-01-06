@@ -1,3 +1,11 @@
-<div *ngIf="connection$ | async as connection">
-  <p>{{ connection }}</p>
-</div>
+<!--<div *ngIf="connection$ | async as connection">-->
+<!--  <p>{{ connection }}</p>-->
+<!--</div>-->
+
+<app-test-game
+  (playerStatusChange)="updatePlayerStatus($event)"
+  [socket]="this.socket"
+  [countdown]="countdown"
+  [timeLeft]="timeLeft"
+  [player]="player"
+></app-test-game>

@@ -22,6 +22,8 @@ export class SpectatorComponent implements OnInit {
   private socket: Socket;
   players: any[] = [];
   timeLeft: number;
+  private countdown: number;
+  playerStatus: any;
 
   constructor(
     private spectatorService: SpectatorService,
@@ -47,10 +49,23 @@ export class SpectatorComponent implements OnInit {
         });
 
         fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+
         fromEvent(this.socket, 'time-left')
           .pipe(takeUntil(disconnect$))
           .subscribe((timeLeft: number) => {
             this.timeLeft = timeLeft;
+          });
+
+        fromEvent(this.socket, 'countdown')
+          .pipe(takeUntil(disconnect$))
+          .subscribe((countdown: number) => {
+            this.countdown = countdown;
+          });
+
+        fromEvent(this.socket, 'player-status')
+          .pipe(takeUntil(disconnect$))
+          .subscribe((playerStatus: any) => {
+            this.playerStatus = playerStatus;
           });
       });
     });

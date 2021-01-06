@@ -2,13 +2,14 @@
 <button [routerLink]="['/watch/gra2']">Gra2</button>
 <button [routerLink]="['/watch/gra3']">Gra3</button>
 <button [routerLink]="['/watch/gra4']">Gra4</button>
-<!--<div *ngIf="connection$ | async as connection">-->
-<!--  {{ connection }}-->
-<!--</div>-->
-<div>
+<div class="game-grid">
   <app-test-game
     *ngFor="let positionNumber of [1, 2, 3, 4]; let index = index"
     [player]="players[index]"
     [timeLeft]="timeLeft"
+    [countdown]='countdown'
+    [playerStatus]="playerStatus"
+    [isSpectator]="true"
+    [gamePosition]="index"
   ></app-test-game>
 </div>

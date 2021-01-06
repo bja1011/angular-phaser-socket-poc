@@ -6,7 +6,11 @@
     '. .'
     '. .';
 
-  app-test-game {
-    max-width: 50vw;
+  app-test-game,
+  app-game {
+    max-width: 45vw;
+    canvas {
+      max-width: 100%;
+    }
   }
 }

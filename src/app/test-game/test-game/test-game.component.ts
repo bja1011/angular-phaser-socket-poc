@@ -6,6 +6,9 @@ import {
   OnInit,
   Output,
 } from '@angular/core';
+import { Socket } from 'socket.io-client';
+import { fromEvent } from 'rxjs';
+import { take, takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-test-game',
@@ -35,33 +38,8 @@ export class TestGameComponent implements OnInit, AfterViewInit {
     this.createGame();
   }
 
-  ngOnInit() {
-    // console.log(this.gamePosition);
-    // console.log(`#game-${this.gamePosition}`);
-    // let s = `#game-${this.gamePosition}`;
-    // console.log(document.querySelector(s));
-    // console.log(document.querySelector(`#game-0`));
-    // this.createGame();
-  }
+  ngOnInit() {}
 
-  //   constructor(private socketService: SocketService) {
-  //     // socketService.socket.on('move', (data) => {
-  //     //   // console.log(data);
-  //     //   this.top = data.y;
-  //     //   this.left = data.x;
-  //     // });
-  //
-  //     if (!location.search.includes('spectator')) {
-  //       // addEventListener('mousemove', (event) => {
-  //       //   socketService.socket.emit('move', { x: event.clientX, y: event.clientY });
-  //       // });
-  //     }
-  //   }
-  //
-  //   move($event: KeyboardEvent) {
-  //     console.log($event);
-  //   }
-  //
   createGame() {
     const config = {
       type: Phaser.AUTO,
@@ -74,7 +52,7 @@ export class TestGameComponent implements OnInit, AfterViewInit {
       },
       scene: MainScene,
       isSpectator: this.isSpectator,
-      playerStatusChangeEmitter: this.playerStatusChange,
+      socket: this.socket,
     };
     this.game = new MyGame(config);
     // this.game['socketService'] = this.socketService;
@@ -83,12 +61,12 @@ export class TestGameComponent implements OnInit, AfterViewInit {
 
 class MyGame extends Phaser.Game {
   isSpectator: boolean;
-  playerStatusChangeEmitter: EventEmitter<any>;
+  socket: Socket;
   constructor(config) {
     super(config);
     console.log(config);
     this.isSpectator = config.isSpectator;
-    this.playerStatusChangeEmitter = config.playerStatusChangeEmitter;
+    this.socket = config.socket;
   }
 }
 
@@ -98,14 +76,20 @@ class MainScene extends Phaser.Scene {
   // private socketService: SocketService;
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private isSpectator;
-  private playerStatusChangeEmitter: EventEmitter<any>;
+  private socket: Socket;
+  gameStarted = false;
 
   init() {
     // this.socketService = this.game['socketService'];
     this.isSpectator = (this.game as MyGame).isSpectator;
-    this.playerStatusChangeEmitter = (this
-      .game as MyGame).playerStatusChangeEmitter;
+    this.socket = (this.game as MyGame).socket;
     this.cursors = this.input.keyboard.createCursorKeys();
+
+    if (this.isSpectator) {
+      this.connectSpectatorSocket();
+    } else {
+      this.connectPlayerSocket();
+    }
   }
 
   preload() {
@@ -204,7 +188,8 @@ class MainScene extends Phaser.Scene {
           //   y: this.currentTrash.y,
           // });
         }
-        this.playerStatusChangeEmitter.emit(this.currentTrash);
+
+        this.emitPlayerStatus();
       }
 
       if (this.currentTrash.y > this.trashes[0].y) {
@@ -226,10 +211,87 @@ class MainScene extends Phaser.Scene {
   }
 
   private startGame(text: Phaser.GameObjects.Text) {
+    this.gameStarted = true;
     if (!this.isSpectator) {
       // this.socketService.socket.emit('start');
     }
-    text.destroy();
+    text?.destroy();
     this.fireTrash();
+  }
+
+  connectPlayerSocket() {
+    this.socket.on('connect', console.log);
+    fromEvent(this.socket, 'connect').subscribe(() => {
+      console.log('connect');
+      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+
+      this.socket.emit('load-player-info', null, (player) => {
+        // this.player = player;
+      });
+
+      fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+
+      fromEvent(this.socket, 'time-left')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((timeLeft: number) => {
+          console.log(timeLeft);
+          // this.timeLeft = timeLeft;
+        });
+
+      fromEvent(this.socket, 'countdown')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((countdown: number) => {
+          console.log(countdown);
+
+          if (countdown === 0) {
+            this.startGame(null);
+          }
+        });
+    });
+  }
+
+  connectSpectatorSocket() {
+    fromEvent(this.socket, 'connect').subscribe(() => {
+      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+
+      this.socket.emit('load-players', null, (players) => {
+        // this.players = players;
+      });
+
+      fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+
+      fromEvent(this.socket, 'time-left')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((timeLeft: number) => {
+          // this.timeLeft = timeLeft;
+        });
+
+      fromEvent(this.socket, 'countdown')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((countdown: number) => {
+          if (countdown === 0) {
+            this.startGame(null);
+          }
+        });
+
+      fromEvent(this.socket, 'player-status')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((playerStatus: any) => {
+          if (!this.gameStarted) {
+            this.startGame(null);
+          }
+          if (!this.currentTrash) {
+            this.fireTrash();
+          }
+          this.currentTrash.x = playerStatus.status.x;
+          this.currentTrash.y = playerStatus.status.y;
+        });
+    });
+  }
+
+  private emitPlayerStatus() {
+    if (!this.isSpectator) {
+      this.socket.emit('player-status', this.currentTrash, console.log);
+    }
   }
 }

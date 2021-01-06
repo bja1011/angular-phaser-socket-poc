@@ -40,34 +40,6 @@ export class SpectatorComponent implements OnInit {
       this.socket = io(
         `${environment.socketUrl}?room=${params.get('gameId')}&token=spectator`
       );
-
-      fromEvent(this.socket, 'connect').subscribe(() => {
-        const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
-
-        this.socket.emit('load-players', null, (players) => {
-          this.players = players;
-        });
-
-        fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
-
-        fromEvent(this.socket, 'time-left')
-          .pipe(takeUntil(disconnect$))
-          .subscribe((timeLeft: number) => {
-            this.timeLeft = timeLeft;
-          });
-
-        fromEvent(this.socket, 'countdown')
-          .pipe(takeUntil(disconnect$))
-          .subscribe((countdown: number) => {
-            this.countdown = countdown;
-          });
-
-        fromEvent(this.socket, 'player-status')
-          .pipe(takeUntil(disconnect$))
-          .subscribe((playerStatus: any) => {
-            this.playerStatus = playerStatus;
-          });
-      });
     });
 
     // this.activatedRoute.paramMap

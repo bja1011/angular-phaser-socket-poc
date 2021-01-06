@@ -7,9 +7,10 @@
     *ngFor="let positionNumber of [1, 2, 3, 4]; let index = index"
     [player]="players[index]"
     [timeLeft]="timeLeft"
-    [countdown]='countdown'
+    [countdown]="countdown"
     [playerStatus]="playerStatus"
     [isSpectator]="true"
     [gamePosition]="index"
+    [socket]="this.socket"
   ></app-test-game>
 </div>

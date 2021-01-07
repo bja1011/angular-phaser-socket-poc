@@ -23,9 +23,10 @@ import Tube from '../classes/Tube.class';
 import TrashContainer from '../classes/TrashContainer.class';
 import Trash from '../classes/Trash.class';
 import { fromEvent, Subject } from 'rxjs';
-import { filter, take, takeUntil } from 'rxjs/operators';
+import { filter, take, takeUntil, tap } from 'rxjs/operators';
 import { Socket } from 'socket.io-client';
 import Minigame from '../classes/Minigame.class';
+import { EventEmitter } from '@angular/core';
 
 export default class MinigameStartScene extends Phaser.Scene {
   SETTINGS;
@@ -1170,6 +1171,7 @@ export default class MinigameStartScene extends Phaser.Scene {
       const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
 
       this.socket.emit('load-player-info', null, (player) => {
+        console.log(player);
         // this.player = player;
       });
 
@@ -1194,14 +1196,35 @@ export default class MinigameStartScene extends Phaser.Scene {
   }
 
   connectSpectatorSocket() {
+    console.log('connecting spectator');
     fromEvent(this.socket, 'connect').subscribe(() => {
-      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+      console.log('connected spectator');
+      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(
+        tap(() => {
+          console.log('dscnt');
+        }),
+        take(1)
+      );
 
-      this.socket.emit('load-players', null, (players) => {
-        // this.players = players;
+      this.socket.emit('load-players', null, (players: any[]) => {
+        console.log(players);
+        (this.game as Minigame).player$.next(
+          players.filter((player) => player.position === this.gamePosition + 1)
+        );
       });
 
-      fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+      fromEvent(this.socket, 'player-connected')
+        .pipe(takeUntil(disconnect$))
+        .subscribe(() => {
+          this.socket.emit('load-players', null, (players: any[]) => {
+            console.log(players);
+            (this.game as Minigame).player$.next(
+              players.filter(
+                (player) => player.position === this.gamePosition + 1
+              )
+            );
+          });
+        });
 
       fromEvent(this.socket, 'time-left')
         .pipe(

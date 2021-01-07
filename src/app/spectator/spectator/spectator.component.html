@@ -13,9 +13,12 @@
   <!--    [gamePosition]="index"-->
   <!--    [socket]="this.socket"-->
   <!--  ></app-test-game>-->
-  <app-game
-    *ngFor="let positionNumber of [1, 2, 3, 4]; let index = index"
-    [gamePosition]="index"
-    [socket]="socket"
-  ></app-game>
+  <ng-container *ngIf='socket'>
+    <app-game
+      *ngFor="let positionNumber of gamePositions; let index = index"
+      [gamePosition]="index"
+      [socket]="socket"
+      [isSpectator]="true"
+    ></app-game>
+  </ng-container>
 </div>

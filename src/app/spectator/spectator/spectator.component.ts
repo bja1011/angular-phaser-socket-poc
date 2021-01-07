@@ -1,4 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  ApplicationRef,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  EventEmitter,
+} from '@angular/core';
 import { SpectatorService } from '../services/spectator.service';
 import { switchMap, take, takeUntil, tap } from 'rxjs/operators';
 import { PlayerService } from '../../player/services/player.service';
@@ -19,11 +25,12 @@ export class SpectatorComponent implements OnInit {
   //     return this.spectatorService.connect(params.get('gameId'), 'spectator');
   //   })
   // );
-  private socket: Socket;
+  socket: Socket;
   players: any[] = [];
   timeLeft: number;
   private countdown: number;
   playerStatus: any;
+  gamePositions = [1, 2, 3, 4];
 
   constructor(
     private spectatorService: SpectatorService,
@@ -35,11 +42,15 @@ export class SpectatorComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    (window as any).globalEmitter = new EventEmitter();
     this.activatedRoute.paramMap.subscribe((params) => {
       this.socket?.disconnect();
+      this.socket = null;
       this.socket = io(
         `${environment.socketUrl}?room=${params.get('gameId')}&token=spectator`
       );
+
+      (window as any).globalEmitter.emit('restart-game');
     });
 
     // this.activatedRoute.paramMap

@@ -1,5 +1,2 @@
-<div class='game-container' id="game-{{ gamePosition }}"></div>
-<!--  <p>time left: {{ timeLeft }}</p>-->
-<!--  <p>countdown: {{ countdown }}</p>-->
-<!--  <p>player: {{ player | json }}</p>-->
-<!--  <p *ngIf="!isSpectator">playerStatus: {{ playerStatusPassed | json }}</p>-->
+<div class="game-container" id="game-{{ gamePosition }}"></div>
+<p *ngIf="isSpectator">player: {{ player$ | async | json }}</p>

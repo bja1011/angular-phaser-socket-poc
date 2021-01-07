@@ -6,6 +6,7 @@ export default class Minigame extends Phaser.Game {
   isSpectator: boolean;
   socket: Socket;
   gamePosition: number;
+  player$: BehaviorSubject<any>;
 
   constructor(gameConfig: Phaser.Types.Core.GameConfig | any) {
     super(gameConfig);
@@ -13,6 +14,7 @@ export default class Minigame extends Phaser.Game {
     this.isSpectator = gameConfig.isSpectator || false;
     this.socket = gameConfig.socket;
     this.gamePosition = gameConfig.gamePosition;
+
+    this.player$ = new BehaviorSubject<any>(null);
   }
 }
-

@@ -1,5 +1,6 @@
 import { BehaviorSubject } from 'rxjs';
 import { Socket } from 'socket.io-client';
+import { EventEmitter } from '@angular/core';
 
 export default class Minigame extends Phaser.Game {
   isGameLoaded = new BehaviorSubject(false);
@@ -7,6 +8,7 @@ export default class Minigame extends Phaser.Game {
   socket: Socket;
   gamePosition: number;
   player$: BehaviorSubject<any>;
+  socketEventEmitter: EventEmitter<any>;
 
   constructor(gameConfig: Phaser.Types.Core.GameConfig | any) {
     super(gameConfig);
@@ -14,6 +16,7 @@ export default class Minigame extends Phaser.Game {
     this.isSpectator = gameConfig.isSpectator || false;
     this.socket = gameConfig.socket;
     this.gamePosition = gameConfig.gamePosition;
+    this.socketEventEmitter = gameConfig.socketEventEmitter;
 
     this.player$ = new BehaviorSubject<any>(null);
   }

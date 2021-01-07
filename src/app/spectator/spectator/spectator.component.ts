@@ -20,15 +20,8 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./spectator.component.scss'],
 })
 export class SpectatorComponent implements OnInit {
-  // connection$ = this.activatedRoute.paramMap.pipe(
-  //   switchMap((params) => {
-  //     return this.spectatorService.connect(params.get('gameId'), 'spectator');
-  //   })
-  // );
   socket: Socket;
   players: any[] = [];
-  timeLeft: number;
-  private countdown: number;
   playerStatus: any;
   gamePositions = [1, 2, 3, 4];
 
@@ -52,31 +45,5 @@ export class SpectatorComponent implements OnInit {
 
       (window as any).globalEmitter.emit('restart-game');
     });
-
-    // this.activatedRoute.paramMap
-    //   .pipe(
-    //     switchMap((params) => {
-    //       return this.spectatorService.connect(
-    //         params.get('gameId'),
-    //         'spectator'
-    //       );
-    //     })
-    //   )
-    //   .subscribe(() => {
-    //     // fromEvent(this.spectatorService.socket, 'connect').subscribe(() => {
-    //     //   this.spectatorService.socket.emit('load-players', null, console.log);
-    //     //   const disconnect$ = fromEvent(
-    //     //     this.spectatorService.socket,
-    //     //     'disconnect'
-    //     //   ).pipe(take(1));
-    //     //   fromEvent(this.spectatorService.socket, 'player-connected').pipe(
-    //     //     takeUntil(disconnect$)
-    //     //   );
-    //     // });
-    //   });
   }
-
-  resetGame() {}
-  disconnected() {}
-  gameFinished() {}
 }

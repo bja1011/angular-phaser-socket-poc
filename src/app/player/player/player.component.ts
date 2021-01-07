@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, EventEmitter} from '@angular/core';
 import { PlayerService } from '../services/player.service';
 import { ActivatedRoute } from '@angular/router';
 import { io, Socket } from 'socket.io-client';
@@ -14,6 +14,7 @@ export class PlayerComponent implements OnDestroy {
   player: any;
   socket: Socket;
   private routeParamsSub: Subscription;
+  socketEventEmitter = new EventEmitter<any>();
 
   constructor(
     private playerService: PlayerService,

@@ -102,6 +102,12 @@ export default class MinigameStartScene extends Phaser.Scene {
   socket: Socket;
   gamePosition: number;
   isSpectator: boolean;
+  awaitingGameStartText: Phaser.GameObjects.Text;
+  bgAwaiting: Phaser.GameObjects.Sprite;
+  awaitingScreenContainer: Phaser.GameObjects.Container;
+  timeToBegin: number;
+
+  socketEventEmitter: EventEmitter<any>;
 
   constructor() {
     super('minigameStart');
@@ -112,6 +118,9 @@ export default class MinigameStartScene extends Phaser.Scene {
     this.socket = (this.game as Minigame).socket;
     this.isSpectator = (this.game as Minigame)?.isSpectator;
     this.gamePosition = (this.game as Minigame).gamePosition;
+    this.socketEventEmitter = (this.game as Minigame).socketEventEmitter;
+
+    this.allowSoundEffects = !this.isSpectator;
 
     if (this.isSpectator) {
       this.connectSpectatorSocket();
@@ -135,10 +144,43 @@ export default class MinigameStartScene extends Phaser.Scene {
     if (this.allowSoundEffects) {
       this.createSoundEffects();
     }
+
+    this.createAwaitingScreen();
+
     this.game['isGameLoaded'].next(true);
   }
 
-  beginGame() {
+  createAwaitingScreen() {
+    this.awaitingScreenContainer = this.add.container();
+    this.bgAwaiting = this.add.sprite(
+      this.cameras.main.width / 2,
+      0,
+      MINIGAME_ATLAS,
+      'sorting-background-desktop.png'
+    );
+    this.bgAwaiting.setOrigin(0.5, 0);
+    this.bgAwaiting.setDepth(5);
+    this.bgAwaiting.setTintFill(0x222222);
+    this.bgAwaiting.setAlpha(0.8, 0.5, 0.5, 0.9);
+    this.awaitingScreenContainer.add(this.bgAwaiting);
+
+    this.awaitingGameStartText = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      `Oczekiwanie na start gry`,
+      {
+        ...MINIGAME_TEXT_STYLES,
+        fontSize: 40,
+      }
+    );
+    this.awaitingGameStartText.setOrigin(0.5);
+    this.awaitingGameStartText.setDepth(5);
+    this.awaitingScreenContainer.add(this.awaitingGameStartText);
+  }
+
+  beginGame(timeToBegin = 3) {
+    this.timeToBegin = timeToBegin;
+    this.awaitingScreenContainer.setAlpha(0);
     this.setConfigAndStartGame(1);
   }
 
@@ -346,7 +388,12 @@ export default class MinigameStartScene extends Phaser.Scene {
       this.createGiftContainer();
       this.createGiftBoard();
     }
-    this.createCountdown();
+
+    if (this.timeToBegin === 0) {
+      this.startGame();
+    } else {
+      this.createCountdown();
+    }
   }
 
   createBackground() {
@@ -1165,103 +1212,118 @@ export default class MinigameStartScene extends Phaser.Scene {
   }
 
   connectPlayerSocket() {
-    console.log('connecting  player');
-    fromEvent(this.socket, 'connect').subscribe(() => {
-      console.log('connected player');
-      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+    this.socket.on('connect_error', console.log);
 
-      this.socket.emit('load-player-info', null, (player) => {
-        console.log(player);
-        // this.player = player;
+    console.log('connecting  player');
+    fromEvent(this.socket, 'connect').subscribe((data) => {
+      console.log('connected player');
+    });
+
+    const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+
+    this.socket.emit('load-player-info', null, (player) => {
+      console.log(player);
+      // this.player = player;
+    });
+
+    fromEvent(this.socket, 'time-left')
+      .pipe(
+        takeUntil(disconnect$),
+        filter(
+          (playerStatus: any) => playerStatus.position === this.gamePosition
+        )
+      )
+      .subscribe((timeLeft: number) => {
+        this.timeLeft = timeLeft;
       });
 
-      fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+    fromEvent(this.socket, 'player-connected').pipe(
+      tap(console.log),
+      takeUntil(disconnect$)
+    );
 
-      fromEvent(this.socket, 'time-left')
-        .pipe(takeUntil(disconnect$))
-        .subscribe((timeLeft: number) => {
-          this.timeLeft = timeLeft;
-        });
+    fromEvent(this.socket, 'countdown')
+      .pipe(takeUntil(disconnect$))
+      .subscribe((countdown: number) => {
+        console.log(countdown);
 
-      fromEvent(this.socket, 'countdown')
-        .pipe(takeUntil(disconnect$))
-        .subscribe((countdown: number) => {
-          console.log(countdown);
-
-          if (countdown === 3) {
-            this.beginGame();
-          }
-        });
-    });
+        if (countdown === 3) {
+          this.beginGame();
+        }
+      });
   }
 
   connectSpectatorSocket() {
     console.log('connecting spectator');
-    fromEvent(this.socket, 'connect').subscribe(() => {
-      console.log('connected spectator');
-      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(
-        tap(() => {
-          console.log('dscnt');
-        }),
-        take(1)
-      );
+    const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
 
-      this.socket.emit('load-players', null, (players: any[]) => {
-        console.log(players);
-        (this.game as Minigame).player$.next(
-          players.filter((player) => player.position === this.gamePosition + 1)
-        );
+    fromEvent(this.socket, 'time-left')
+      .pipe(takeUntil(disconnect$))
+      .subscribe((timeLeft: number) => {
+        if (!this.isGameStarted) {
+          this.beginGame(0);
+        }
+        this.timeLeft = timeLeft;
       });
 
-      fromEvent(this.socket, 'player-connected')
-        .pipe(takeUntil(disconnect$))
-        .subscribe(() => {
-          this.socket.emit('load-players', null, (players: any[]) => {
-            console.log(players);
-            (this.game as Minigame).player$.next(
-              players.filter(
-                (player) => player.position === this.gamePosition + 1
-              )
-            );
-          });
-        });
+    this.socket.emit('load-players', null, (players: any[]) => {
+      console.log(players);
+      (this.game as Minigame).player$.next(
+        players.filter((player) => player.position === this.gamePosition + 1)
+      );
+    });
 
-      fromEvent(this.socket, 'time-left')
-        .pipe(
-          takeUntil(disconnect$),
-          filter(
-            (playerStatus: any) => playerStatus.position === this.gamePosition
-          )
+    fromEvent(this.socket, 'player-connected')
+      .pipe(takeUntil(disconnect$))
+      .subscribe(() => {
+        this.socket.emit('load-players', null, (players: any[]) => {
+          console.log(players);
+          (this.game as Minigame).player$.next(
+            players.filter(
+              (player) => player.position === this.gamePosition + 1
+            )
+          );
+        });
+      });
+
+    fromEvent(this.socket, 'time-left')
+      .pipe(
+        takeUntil(disconnect$),
+        filter(
+          (playerStatus: any) => playerStatus.position === this.gamePosition
         )
-        .subscribe((timeLeft: number) => {
-          this.timeLeft = timeLeft;
-        });
+      )
+      .subscribe((timeLeft: number) => {
+        this.timeLeft = timeLeft;
+      });
 
-      fromEvent(this.socket, 'countdown')
-        .pipe(takeUntil(disconnect$))
-        .subscribe((countdown: number) => {
-          if (countdown === 3) {
-            this.beginGame();
-          }
-        });
+    fromEvent(this.socket, 'countdown')
+      .pipe(takeUntil(disconnect$))
+      .subscribe((countdown: number) => {
+        if (countdown === 3) {
+          this.beginGame();
+        }
+      });
 
-      fromEvent(this.socket, 'player-status')
-        .pipe(
-          takeUntil(disconnect$),
-          filter(
-            (playerStatus: any) => playerStatus.position === this.gamePosition
-          )
+    fromEvent(this.socket, 'player-status')
+      .pipe(
+        takeUntil(disconnect$),
+        filter(
+          (playerStatus: any) => playerStatus.position === this.gamePosition
         )
-        .subscribe((playerStatus: any) => {
-          if (!this.isGameStarted) {
-            this.beginGame();
-          }
-          // if (!this.currentTrash) {
-          //   this.fireTrash();
-          // }
-          // this.currentTrash.x = playerStatus.status.x;
-          // this.currentTrash.y = playerStatus.status.y;
-        });
+      )
+      .subscribe((playerStatus: any) => {
+        if (!this.isGameStarted) {
+          this.beginGame();
+        }
+        // if (!this.currentTrash) {
+        //   this.fireTrash();
+        // }
+        // this.currentTrash.x = playerStatus.status.x;
+        // this.currentTrash.y = playerStatus.status.y;
+      });
+    fromEvent(this.socket, 'connect').subscribe(() => {
+      console.log('connected spectator');
     });
   }
 }

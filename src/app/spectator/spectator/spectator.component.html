@@ -16,5 +16,6 @@
   <app-game
     *ngFor="let positionNumber of [1, 2, 3, 4]; let index = index"
     [gamePosition]="index"
+    [socket]="socket"
   ></app-game>
 </div>

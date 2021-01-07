@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { Socket } from 'socket.io-client';
 import { fromEvent } from 'rxjs';
-import { take, takeUntil } from 'rxjs/operators';
+import { filter, take, takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-test-game',
@@ -53,6 +53,7 @@ export class TestGameComponent implements OnInit, AfterViewInit {
       scene: MainScene,
       isSpectator: this.isSpectator,
       socket: this.socket,
+      gamePosition: this.gamePosition,
     };
     this.game = new MyGame(config);
     // this.game['socketService'] = this.socketService;
@@ -62,11 +63,12 @@ export class TestGameComponent implements OnInit, AfterViewInit {
 class MyGame extends Phaser.Game {
   isSpectator: boolean;
   socket: Socket;
+  gamePosition: number;
   constructor(config) {
     super(config);
-    console.log(config);
     this.isSpectator = config.isSpectator;
     this.socket = config.socket;
+    this.gamePosition = config.gamePosition;
   }
 }
 
@@ -78,11 +80,13 @@ class MainScene extends Phaser.Scene {
   private isSpectator;
   private socket: Socket;
   gameStarted = false;
+  gamePosition: number;
 
   init() {
     // this.socketService = this.game['socketService'];
     this.isSpectator = (this.game as MyGame).isSpectator;
     this.socket = (this.game as MyGame).socket;
+    this.gamePosition = (this.game as MyGame).gamePosition;
     this.cursors = this.input.keyboard.createCursorKeys();
 
     if (this.isSpectator) {
@@ -220,7 +224,6 @@ class MainScene extends Phaser.Scene {
   }
 
   connectPlayerSocket() {
-    this.socket.on('connect', console.log);
     fromEvent(this.socket, 'connect').subscribe(() => {
       console.log('connect');
       const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
@@ -275,7 +278,12 @@ class MainScene extends Phaser.Scene {
         });
 
       fromEvent(this.socket, 'player-status')
-        .pipe(takeUntil(disconnect$))
+        .pipe(
+          takeUntil(disconnect$),
+          filter(
+            (playerStatus: any) => playerStatus.position === this.gamePosition
+          )
+        )
         .subscribe((playerStatus: any) => {
           if (!this.gameStarted) {
             this.startGame(null);

@@ -22,7 +22,10 @@ import {
 import Tube from '../classes/Tube.class';
 import TrashContainer from '../classes/TrashContainer.class';
 import Trash from '../classes/Trash.class';
-import { Subject } from 'rxjs';
+import { fromEvent, Subject } from 'rxjs';
+import { filter, take, takeUntil } from 'rxjs/operators';
+import { Socket } from 'socket.io-client';
+import Minigame from '../classes/Minigame.class';
 
 export default class MinigameStartScene extends Phaser.Scene {
   SETTINGS;
@@ -95,9 +98,25 @@ export default class MinigameStartScene extends Phaser.Scene {
   giftCatched = 0;
   giftIcon: Phaser.GameObjects.Sprite;
 
+  socket: Socket;
+  gamePosition: number;
+  isSpectator: boolean;
+
   constructor() {
     super('minigameStart');
     this.SETTINGS = { ...MINIGAME_SETTINGS };
+  }
+
+  init() {
+    this.socket = (this.game as Minigame).socket;
+    this.isSpectator = (this.game as Minigame)?.isSpectator;
+    this.gamePosition = (this.game as Minigame).gamePosition;
+
+    if (this.isSpectator) {
+      this.connectSpectatorSocket();
+    } else {
+      this.connectPlayerSocket();
+    }
   }
 
   create() {
@@ -445,7 +464,8 @@ export default class MinigameStartScene extends Phaser.Scene {
   }
 
   timerLogic() {
-    this.timeLeft--;
+    console.log(this.timeLeft);
+    // this.timeLeft--;
     this.timeText.setText(`${this.timeLeft}`);
     if (this.timeLeft === 0) {
       this.gameOver();
@@ -1141,5 +1161,84 @@ export default class MinigameStartScene extends Phaser.Scene {
     this.tubeSound = this.sound.add('tube-sound');
     this.splashSound = this.sound.add('splash-sound');
     this.countdownSound = this.sound.add('countdown-sound');
+  }
+
+  connectPlayerSocket() {
+    console.log('connecting  player');
+    fromEvent(this.socket, 'connect').subscribe(() => {
+      console.log('connected player');
+      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+
+      this.socket.emit('load-player-info', null, (player) => {
+        // this.player = player;
+      });
+
+      fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+
+      fromEvent(this.socket, 'time-left')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((timeLeft: number) => {
+          this.timeLeft = timeLeft;
+        });
+
+      fromEvent(this.socket, 'countdown')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((countdown: number) => {
+          console.log(countdown);
+
+          if (countdown === 3) {
+            this.beginGame();
+          }
+        });
+    });
+  }
+
+  connectSpectatorSocket() {
+    fromEvent(this.socket, 'connect').subscribe(() => {
+      const disconnect$ = fromEvent(this.socket, 'disconnect').pipe(take(1));
+
+      this.socket.emit('load-players', null, (players) => {
+        // this.players = players;
+      });
+
+      fromEvent(this.socket, 'player-connected').pipe(takeUntil(disconnect$));
+
+      fromEvent(this.socket, 'time-left')
+        .pipe(
+          takeUntil(disconnect$),
+          filter(
+            (playerStatus: any) => playerStatus.position === this.gamePosition
+          )
+        )
+        .subscribe((timeLeft: number) => {
+          this.timeLeft = timeLeft;
+        });
+
+      fromEvent(this.socket, 'countdown')
+        .pipe(takeUntil(disconnect$))
+        .subscribe((countdown: number) => {
+          if (countdown === 3) {
+            this.beginGame();
+          }
+        });
+
+      fromEvent(this.socket, 'player-status')
+        .pipe(
+          takeUntil(disconnect$),
+          filter(
+            (playerStatus: any) => playerStatus.position === this.gamePosition
+          )
+        )
+        .subscribe((playerStatus: any) => {
+          if (!this.isGameStarted) {
+            this.beginGame();
+          }
+          // if (!this.currentTrash) {
+          //   this.fireTrash();
+          // }
+          // this.currentTrash.x = playerStatus.status.x;
+          // this.currentTrash.y = playerStatus.status.y;
+        });
+    });
   }
 }

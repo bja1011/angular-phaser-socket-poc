@@ -3,7 +3,7 @@ import Minigame from '../classes/Minigame.class';
 import MinigamePreloadScene from '../scenes/Minigame.preload.scene';
 import MinigameStartScene from '../scenes/Minigame.start.scene';
 import NO_ZOOM = Phaser.Scale.NO_ZOOM;
-import ScaleModes = Phaser.Scale.ScaleModes;
+import { Socket } from 'socket.io-client';
 
 @Component({
   selector: 'app-game',
@@ -13,6 +13,7 @@ import ScaleModes = Phaser.Scale.ScaleModes;
 export class GameComponent implements AfterViewInit {
   @Input() gamePosition = 0;
   @Input() isSpectator: boolean;
+  @Input() socket: Socket;
 
   private game: Minigame;
 
@@ -27,15 +28,18 @@ export class GameComponent implements AfterViewInit {
       backgroundColor: 0xbfcdd7,
       zoom: NO_ZOOM,
       scale: {
-        mode: ScaleModes.FIT
+        mode: Phaser.Scale.ScaleModes.FIT,
       },
       scene: [MinigamePreloadScene, MinigameStartScene],
       physics: {
         default: 'arcade',
         arcade: {
-          debug: true,
+          debug: false,
         },
       },
-    });
+      socket: this.socket,
+      gamePosition: this.gamePosition,
+      isSpectator: this.isSpectator,
+    } as any);
   }
 }
